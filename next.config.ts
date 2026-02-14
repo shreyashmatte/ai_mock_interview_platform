@@ -11,7 +11,7 @@ const nextConfig: NextConfig = {
   //     },
   //   ],
   // },
-  eslint: {
+  eslist: {
     ignoreDuringBuilds: true,
   },
   typescript: {
