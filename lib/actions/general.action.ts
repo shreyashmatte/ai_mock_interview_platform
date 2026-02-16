@@ -19,11 +19,10 @@ export async function createFeedback(params: CreateFeedbackParams) {
             .join("");
 
         const { object } = await generateObject({
-            model: google("gemini-2.0-flash-001", {
-                structuredOutputs: false,
+            model: google("gemini-2.0-flash-001"),
+                schema: feedbackSchema,
+                prompt: `
             }),
-            schema: feedbackSchema,
-            prompt: `
         You are an AI interviewer analyzing a mock interview. Your task is to evaluate the candidate based on structured categories. Be thorough and detailed in your analysis. Don't be lenient with the candidate. If there are mistakes or areas for improvement, point them out.
         Transcript:
         ${formattedTranscript}
@@ -91,36 +90,35 @@ export async function getFeedbackByInterviewId(
     return { id: feedbackDoc.id, ...feedbackDoc.data() } as Feedback;
 }
 
-export async function getLatestInterviews(
-    params: GetLatestInterviewsParams
-): Promise<Interview[] | null> {
-    const { userId, limit = 20 } = params;
+export const getLatestInterviews = async (
+    userId?: string,
+    limit: number = 10
+) => {
+    if (!userId) return []; // ✅ Prevent Firestore crash
 
     const interviews = await db
         .collection("interviews")
-        .orderBy("createdAt", "desc")
         .where("finalized", "==", true)
-        .where("userId", "!=", userId)
+        .orderBy("createdAt", "desc")
         .limit(limit)
         .get();
 
     return interviews.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
-    })) as Interview[];
-}
+    }));
+};
 
-export async function getInterviewsByUserId(
-    userId: string
-): Promise<Interview[] | null> {
+export const getInterviewsByUserId = async (userId?: string) => {
+    if (!userId) return [];
+
     const interviews = await db
         .collection("interviews")
         .where("userId", "==", userId)
-        .orderBy("createdAt", "desc")
         .get();
-
-    return interviews.docs.map((doc) => ({
+    return interviews.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
-    })) as Interview[];
-}
+    }));
+};
+

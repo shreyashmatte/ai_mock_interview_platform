@@ -1,7 +1,10 @@
+
 "use server";
 
 import { auth, db } from "@/firebase/admin";
 import { cookies } from "next/headers";
+import { FirebaseError } from "firebase-admin";
+
 
 // Session duration (1 week)
 const SESSION_DURATION = 60 * 60 * 24 * 7;
@@ -41,7 +44,7 @@ export async function signUp(params: SignUpParams) {
         await db.collection("users").doc(uid).set({
             name,
             email,
-            // profileURL,
+            //profileURL: str ?? "",
             // resumeURL,
         });
 
@@ -49,11 +52,15 @@ export async function signUp(params: SignUpParams) {
             success: true,
             message: "Account created successfully. Please sign in.",
         };
-    } catch (error: any) {
-        console.error("Error creating user:", error);
+    } catch (e:unknown) {
+        console.error("Error creating user:", e);
 
-        // Handle Firebase specific errors
-        if (error.code === "auth/email-already-exists") {
+        if (
+            typeof e === "object" &&
+            e !== null &&
+            "code" in e &&
+            (e as { code: string }).code === "auth/email-already-exists"
+        ) {
             return {
                 success: false,
                 message: "This email is already in use",
@@ -62,8 +69,9 @@ export async function signUp(params: SignUpParams) {
 
         return {
             success: false,
-            message: "Failed to create account. Please try again.",
+            message: "Something went wrong. Please try again.",
         };
+
     }
 }
 
@@ -79,8 +87,8 @@ export async function signIn(params: SignInParams) {
             };
 
         await setSessionCookie(idToken);
-    } catch (error: any) {
-        console.log("");
+    } catch (e: unknown) {
+        console.log(e);
 
         return {
             success: false,
@@ -117,15 +125,13 @@ export async function getCurrentUser(): Promise<User | null> {
             ...userRecord.data(),
             id: userRecord.id,
         } as User;
-    } catch (error) {
-        console.log(error);
+    } catch (e) {
+        console.log(e);
 
-        // Invalid or expired session
         return null;
     }
 }
 
-// Check if user is authenticated
 export async function isAuthenticated() {
     const user = await getCurrentUser();
     return !!user;
