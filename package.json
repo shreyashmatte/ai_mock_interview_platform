@@ -10,9 +10,10 @@
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.29",
+    "@google/genai": "^1.41.0",
     "@hookform/resolvers": "^5.2.2",
     "@vapi-ai/web": "^2.5.2",
-    "ai": "^6.0.85",
+    "ai": "^6.0.91",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dayjs": "^1.11.19",

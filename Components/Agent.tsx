@@ -31,12 +31,10 @@ const Agent = ({
                }: AgentProps) => {
     const router = useRouter();
     const [callStatus, setCallStatus] = useState<CallStatus>(CallStatus.INACTIVE);
-    const messages = [
-        "Whats your name?",
-        "My name is Shreyash , Nice to meet you"
-    ];
+    const [messages, setMessages] = useState<SavedMessage[]>([]);
     const [isSpeaking, setIsSpeaking] = useState(true);
-    const lastMessage = messages[messages.length-1];
+    const lastMessage = messages[messages.length-1]?.content;
+    const isCallInactiveOrFinished = callStatus === CallStatus.INACTIVE || callStatus === "FINISHED"
 
     useEffect(() => {
         const onCallStart = () => {
@@ -47,13 +45,13 @@ const Agent = ({
             setCallStatus(CallStatus.FINISHED);
         };
 
-        //const onMessage = (message: Message) => {
-          //  if (message.type === "transcript" && message.transcriptType === "final") {
+        const onMessage = (message: Message) => {
+            if (message.type === "transcript" && message.transcriptType === "final") {
 
-            //    const newMessage = { role: message.role, content: message.transcript };
-              //  setMessages((prev) => [...prev, newMessage]);
-            //}
-        //};
+                const newMessage = { role: message.role, content: message.transcript };
+                setMessages((prev) => [...prev, newMessage]);
+            }
+        };
 
         const onSpeechStart = () => {
             console.log("speech start");
@@ -71,7 +69,7 @@ const Agent = ({
 
         vapi.on("call-start", onCallStart);
         vapi.on("call-end", onCallEnd);
-        //vapi.on("message", onMessage);
+        vapi.on("message", onMessage);
         vapi.on("speech-start", onSpeechStart);
         vapi.on("speech-end", onSpeechEnd);
         vapi.on("error", onError);
@@ -79,7 +77,7 @@ const Agent = ({
         return () => {
             vapi.off("call-start", onCallStart);
             vapi.off("call-end", onCallEnd);
-         //   vapi.off("message", onMessage);
+            vapi.off("message", onMessage);
             vapi.off("speech-start", onSpeechStart);
             vapi.off("speech-end", onSpeechEnd);
             vapi.off("error", onError);
@@ -120,12 +118,18 @@ const Agent = ({
         setCallStatus(CallStatus.CONNECTING);
 
         if (type === "generate") {
-            await vapi.start(process.env.NEXT_PUBLIC_VAPI_WORKFLOW_ID!, {
-                variableValues: {
-                    username: userName,
-                    userid: userId,
-                },
-            });
+            await vapi.start(
+                undefined,
+                undefined,
+                undefined,
+                process.env.NEXT_PUBLIC_VAPI_WORKFLOW_ID!,
+                {
+                    variableValues: {
+                        username: userName,
+                        userid: userId,
+                    },
+                }
+            );
         } else {
             let formattedQuestions = "";
             if (questions) {
@@ -205,7 +209,7 @@ const Agent = ({
             />
 
                         <span className="relative">
-              {callStatus === "INACTIVE" || callStatus === "FINISHED"
+              {isCallInactiveOrFinished
                   ? "Call"
                   : ". . ."}
             </span>

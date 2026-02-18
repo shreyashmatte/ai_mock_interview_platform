@@ -90,35 +90,6 @@ export async function getFeedbackByInterviewId(
     return { id: feedbackDoc.id, ...feedbackDoc.data() } as Feedback;
 }
 
-export const getLatestInterviews = async (
-    userId?: string,
-    limit: number = 10
-) => {
-    if (!userId) return []; // ✅ Prevent Firestore crash
 
-    const interviews = await db
-        .collection("interviews")
-        .where("finalized", "==", true)
-        .orderBy("createdAt", "desc")
-        .limit(limit)
-        .get();
 
-    return interviews.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-    }));
-};
-
-export const getInterviewsByUserId = async (userId?: string) => {
-    if (!userId) return [];
-
-    const interviews = await db
-        .collection("interviews")
-        .where("userId", "==", userId)
-        .get();
-    return interviews.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-    }));
-};
 
