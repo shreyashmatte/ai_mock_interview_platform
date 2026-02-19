@@ -88,7 +88,7 @@ const Agent = ({
 
 
         const handleGenerateFeedback = async (messages: SavedMessage[]) => {
-            console.log("handleGenerateFeedback");
+            console.log("Generate Feedback here");
 
             const { success, feedbackId: id } = await createFeedback({
                 interviewId: interviewId!,
@@ -109,7 +109,7 @@ const Agent = ({
             if (type === "generate") {
                 router.push("/");
             } else {
-              //  handleGenerateFeedback(messages);
+                handleGenerateFeedback(messages);
             }
         }
     }, [messages, callStatus, feedbackId, interviewId, router, type, userId]);
@@ -200,7 +200,7 @@ const Agent = ({
 
             <div className="w-full flex justify-center">
                 {callStatus !== "ACTIVE" ? (
-                    <button className="relative btn-call" onClick={() => handleCall()}>
+                    <button className="relative btn-call" onClick={(handleCall)}>
             <span
                 className={cn(
                     "absolute animate-ping rounded-full opacity-75",
@@ -215,7 +215,7 @@ const Agent = ({
             </span>
                     </button>
                 ) : (
-                    <button className="btn-disconnect" onClick={() => handleDisconnect()}>
+                    <button className="btn-disconnect" onClick={(handleDisconnect)}>
                         End
                     </button>
                 )}

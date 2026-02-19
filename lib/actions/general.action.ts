@@ -1,14 +1,14 @@
 
 "use server";
 
-import { generateObject } from "ai";
+import { generateText } from "ai";
 import { google } from "@ai-sdk/google";
 
 import { db } from "@/firebase/admin";
 import { feedbackSchema } from "@/constants";
 
 export async function createFeedback(params: CreateFeedbackParams) {
-    const { interviewId, userId, transcript, feedbackId } = params;
+    const { interviewId, userId, transcript } = params;
 
     try {
         const formattedTranscript = transcript
@@ -18,48 +18,72 @@ export async function createFeedback(params: CreateFeedbackParams) {
             )
             .join("");
 
-        const { object } = await generateObject({
-            model: google("gemini-2.0-flash-001"),
-                schema: feedbackSchema,
-                prompt: `
-            }),
-        You are an AI interviewer analyzing a mock interview. Your task is to evaluate the candidate based on structured categories. Be thorough and detailed in your analysis. Don't be lenient with the candidate. If there are mistakes or areas for improvement, point them out.
-        Transcript:
-        ${formattedTranscript}
+        const { text } = await generateText({
+            model: google("gemini-2.5-flash"),
+            prompt: `
+Return ONLY valid JSON in this exact format:
 
-        Please score the candidate from 0 to 100 in the following areas. Do not add categories other than the ones provided:
-        - **Communication Skills**: Clarity, articulation, structured responses.
-        - **Technical Knowledge**: Understanding of key concepts for the role.
-        - **Problem-Solving**: Ability to analyze problems and propose solutions.
-        - **Cultural & Role Fit**: Alignment with company values and job role.
-        - **Confidence & Clarity**: Confidence in responses, engagement, and clarity.
-        `,
-            system:
-                "You are a professional interviewer analyzing a mock interview. Your task is to evaluate the candidate based on structured categories",
+{
+  "totalScore": number,
+  "categoryScores": [
+    {
+      "name": "Communication Skills",
+      "score": number,
+      "comment": string
+    },
+    {
+      "name": "Technical Knowledge",
+      "score": number,
+      "comment": string
+    },
+    {
+      "name": "Problem-Solving",
+      "score": number,
+      "comment": string
+    },
+    {
+      "name": "Cultural & Role Fit",
+      "score": number,
+      "comment": string
+    },
+    {
+      "name": "Confidence & Clarity",
+      "score": number,
+      "comment": string
+    }
+  ],
+  "strengths": string[],
+  "areasForImprovement": string[],
+  "finalAssessment": string
+}
+
+Transcript:
+${formattedTranscript}
+`,
         });
 
-        const feedback = {
-            interviewId: interviewId,
-            userId: userId,
-            totalScore: object.totalScore,
-            categoryScores: object.categoryScores,
-            strengths: object.strengths,
-            areasForImprovement: object.areasForImprovement,
-            finalAssessment: object.finalAssessment,
+        // 🔥 Clean markdown if Gemini wraps JSON
+        const cleanedText = text
+            .replace(/```json/g, "")
+            .replace(/```/g, "")
+            .trim();
+
+        const parsed = JSON.parse(cleanedText);
+
+        // ✅ Save correct structure for frontend
+        const docRef = await db.collection("feedback").add({
+            interviewId,
+            userId,
+            totalScore: parsed.totalScore,
+            categoryScores: parsed.categoryScores,
+            strengths: parsed.strengths,
+            areasForImprovement: parsed.areasForImprovement,
+            finalAssessment: parsed.finalAssessment,
             createdAt: new Date().toISOString(),
-        };
+        });
 
-        let feedbackRef;
+        return { success: true, feedbackId: docRef.id };
 
-        if (feedbackId) {
-            feedbackRef = db.collection("feedback").doc(feedbackId);
-        } else {
-            feedbackRef = db.collection("feedback").doc();
-        }
-
-        await feedbackRef.set(feedback);
-
-        return { success: true, feedbackId: feedbackRef.id };
     } catch (error) {
         console.error("Error saving feedback:", error);
         return { success: false };
@@ -89,7 +113,34 @@ export async function getFeedbackByInterviewId(
     const feedbackDoc = querySnapshot.docs[0];
     return { id: feedbackDoc.id, ...feedbackDoc.data() } as Feedback;
 }
+export async function getInterviewsByUserId(userId: string): Promise<Interview[]>{
+    const interviews = await db
+        .collection('interviews')
+        .where('userId', '==', userId)
+        .orderBy('createdAt', 'desc')
+        .get();
 
+    return interviews.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+    }))as Interview[];
+}
+export async function  getLatestInterviews(params: GetLatestInterviewsParams): Promise<Interview[]>{
+    const { userId ,limit = 20 } = params;
+
+    const interviews = await db
+        .collection("interviews")
+        .where("finalized", "==", true)
+        .where('userId', '!=', userId)
+        .orderBy("createdAt", "desc")
+        .limit(limit)
+        .get();
+
+    return interviews.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+    }))as Interview[];
+};
 
 
 

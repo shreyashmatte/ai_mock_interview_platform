@@ -4,23 +4,31 @@ import Image from "next/image";
 import { Button } from "@/Components/ui/button";
 import InterviewCard from "@/Components/InterviewCard";
 
-import {getCurrentUser, getLatestInterviews} from "@/lib/actions/auth.action";
-//import {
- //   getInterviewsByUserId,
-   // getLatestInterviews,
-//} from "@/lib/actions/general.action";
-import {dummyInterviews} from "@/constants";
-import {getInterviewsByUserId} from "@/lib/actions/auth.action";
+import {getCurrentUser} from "@/lib/actions/auth.action";
+
+//import {dummyInterviews} from "@/constants";
+import {getInterviewsByUserId} from "@/lib/actions/general.action";
+import {getLatestInterviews} from "@/lib/actions/general.action";
 
 const Page = async () => {
     const user = await getCurrentUser()
-    const [userInterviews, latestInterview] = await Promise.all([
-        getInterviewsByUserId(user?.id!),
-        getLatestInterviews({ userId: user?.id! }),
+
+    if (!user) {
+        return (
+            <div className="p-8">
+                <h2>Please log in to view your interviews.</h2>
+            </div>
+        );
+    }
+    console.log("Current Logged In User ID:", user.id);
+
+    const [userInterviews = [], latestInterviews = []] = await Promise.all([
+        getInterviewsByUserId(user.id),
+        getLatestInterviews({ userId: user.id }),
     ]);
 
-    const hasPastInterviews = userInterviews ?.length>0;
-    const hasUpcomingInterviews = latestInterview ?.length>0;
+    const hasPastInterviews = userInterviews.length > 0;
+    const hasUpcomingInterviews = latestInterviews.length > 0;
 return (
         <>
             <section className="card-cta">
@@ -53,7 +61,7 @@ return (
                         userInterviews?.map((interview) => (
                             <InterviewCard
                                 key={interview.id}
-                                userId={user?.id}
+                                userId={user.id}
                                 interviewId={interview.id}
                                 role={interview.role}
                                 type={interview.type}
@@ -73,10 +81,10 @@ return (
                 <div className="interviews-section">
 
                     {hasUpcomingInterviews ? (
-                        latestInterview?.map((interview) => (
+                        latestInterviews?.map((interview) => (
                             <InterviewCard
                                 key={interview.id}
-                                userId={user?.id}
+                                userId={user.id}
                                 interviewId={interview.id}
                                 role={interview.role}
                                 type={interview.type}

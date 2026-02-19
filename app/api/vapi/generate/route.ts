@@ -47,9 +47,13 @@ export async function POST(request: Request) {
             createdAt: new Date().toISOString(),
         };
 
-        await db.collection("interviews").add(interview);
+        const docRef = await db.collection("interviews").add(interview);
 
-        return Response.json({ success: true }, { status: 200 });
+        return Response.json(
+            { success: true, interviewId: docRef.id },
+            { status: 200 }
+        );
+
     } catch (error) {
         console.error( error);
         return Response.json({ success: false, error }, { status: 500 });
