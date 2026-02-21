@@ -62,7 +62,6 @@ ${formattedTranscript}
 `,
         });
 
-        // 🔥 Clean markdown if Gemini wraps JSON
         const cleanedText = text
             .replace(/```json/g, "")
             .replace(/```/g, "")
@@ -70,7 +69,6 @@ ${formattedTranscript}
 
         const parsed = JSON.parse(cleanedText);
 
-        // ✅ Save correct structure for frontend
         const docRef = await db.collection("feedback").add({
             interviewId,
             userId,
@@ -80,6 +78,10 @@ ${formattedTranscript}
             areasForImprovement: parsed.areasForImprovement,
             finalAssessment: parsed.finalAssessment,
             createdAt: new Date().toISOString(),
+        });
+
+        await db.collection("interviews").doc(interviewId).update({
+            userId,
         });
 
         return { success: true, feedbackId: docRef.id };
